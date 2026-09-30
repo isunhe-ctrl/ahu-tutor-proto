@@ -1,0 +1,504 @@
+{
+  "schema_version": "1.0",
+  "agent": "建筑设备自动化智控导师",
+  "description": "控制规则库样例（类别1-3：控制回路完整性 / 控制算法与PID参数 / 串级控制），以空调机组送风温湿度控制为样板。规则引擎在对应功能中按 trigger 调用，命中 condition 时执行 action 并返回 feedback_template。",
+  "rules": [
+    {
+      "id": "R-Loop-01",
+      "category": "控制回路完整性",
+      "trigger": "学生在控制回路识别任务中提交回路配置",
+      "condition": "被控对象、被控变量、测量元件、控制器、执行器、操纵变量 任一缺失或为空",
+      "action": "判定回路不完整，列出缺失要素并提示补填",
+      "function": "功能二·控制回路识别",
+      "feedback_template": "你提交的回路缺少【{missing}】。一个合法单回路必须包含被控对象、被控变量、测量元件、控制器、执行器、操纵变量六要素。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Loop-02",
+      "category": "控制回路完整性",
+      "trigger": "学生提交回路后校验信号流向",
+      "condition": "信号未形成 被控变量→传感器→控制器→执行器→操纵变量→被控对象 的负反馈闭环",
+      "action": "标出断裂/正反馈环节，提示修正流向",
+      "function": "功能二·控制回路识别",
+      "feedback_template": "你的信号流向在【{break_point}】处断裂，未构成负反馈闭环。请检查控制器输出是否回到执行器并影响被控对象。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Loop-03",
+      "category": "控制回路完整性",
+      "trigger": "学生搭建空调送风温度单回路",
+      "condition": "六要素映射与标准示例不符（被控对象=送风空气；被控变量=送风温度；测量元件=风管温度传感器；控制器=DDC；执行器=冷水阀/加热阀；操纵变量=冷/热水流量）",
+      "action": "错配时纠正并给出标准映射",
+      "function": "功能二·控制回路识别",
+      "feedback_template": "你把【{wrong}】当成了{role}，正确映射应为：{correct}。空调送风温度单回路的执行器是冷/热水阀，操纵变量是水流量，而非风机。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Loop-04",
+      "category": "控制回路完整性",
+      "trigger": "学生提交串级控制结构",
+      "condition": "未同时包含主控制器与副控制器，或主/副环被控变量与执行器对应关系错误",
+      "action": "校验双控制器与变量对应，错误则提示",
+      "function": "功能二·控制回路识别",
+      "feedback_template": "串级控制必须含主、副两个控制器：主环被控变量=送风温度，副环被控变量=盘管出水温度/阀后温度，副环操纵变量对应水阀。你少了【{missing}】。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Loop-05",
+      "category": "控制回路完整性",
+      "trigger": "学生为变量选择测量/操纵元件",
+      "condition": "变量类型与元件类型不匹配（如用流量传感器测温度、用阀门直接操纵温度）",
+      "action": "提示类型错配并给出正确元件",
+      "function": "功能二·控制回路识别",
+      "feedback_template": "【{variable}】是{type}量，应由{right_element}测量/操纵，而不是{wrong_element}。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-PID-01",
+      "category": "控制算法与PID参数",
+      "trigger": "学生配置控制器反馈方式",
+      "condition": "使用正反馈且未说明特殊工况",
+      "action": "提示默认应为负反馈，要求说明正反馈理由",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "默认采用负反馈，偏差 e = 设定值 − 测量值。你选用了正反馈，请说明具体工况理由；否则系统会发散。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-PID-02",
+      "category": "控制算法与PID参数",
+      "trigger": "学生为某回路选择控制算法",
+      "condition": "算法与对象不匹配（湿度回路用 PID 引入微分噪声；流量/压力回路用 PID 过度）",
+      "action": "提示推荐选型及理由",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "温度回路常用 PI/PID；湿度回路建议 PI（微分会放大湿度信号噪声）；流量/压力回路常用 P/PI。你选的{algo}用于{object}可能{issue}。",
+      "severity": "info"
+    },
+    {
+      "id": "R-PID-03",
+      "category": "控制算法与PID参数",
+      "trigger": "学生在虚拟调试中设置或修改 PID 参数",
+      "condition": "Kp / Ti / Td 超出本仿真模型推荐区间",
+      "action": "拦截并提示预计后果（振荡/稳态误差），不直接改值",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "你设置的 Kp={Kp} 超出推荐区间 [{Kp_min}, {Kp_max}]，预计导致{consequence}。先回到副环看响应是否振荡？",
+      "severity": "warn",
+      "bounds": {
+        "Kp": {"min": 0.5, "max": 7.46, "recommended": 3.32, "unit": "%/°C（AHU送风温度单回路标定：Ku=82.9,Tu=117.7s；Kp>7.46时PM<30°将振荡，推荐3.32对应PM≈45°）"},
+        "Ti": {"min": 20, "max": 600, "recommended": 59, "unit": "s（推荐≈Tu/2=58.8s）"},
+        "Td": {"min": 0, "max": 120, "recommended": 14.7, "unit": "s（推荐≈Tu/8=14.7s）"}
+      },
+      "calibration": {"method": "Ziegler-Nichols临界比例度法（频域Ku/Tu）+ Modelica等效孪生时域验证", "source": "calibration/AHU_Control.mo、calibration/rules_calibration.json", "note": "Kp设计窗口PM≥30°上限7.46；推荐3.32为PM≈45°保守点；过低仅响应迟缓不发散"}
+    },
+    {
+      "id": "R-PID-04",
+      "category": "控制算法与PID参数",
+      "trigger": "学生执行参数整定",
+      "condition": "整定顺序非 先副环后主环；单环内非 先比例、再积分、后微分",
+      "action": "提示正确整定顺序",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "整定顺序应为：先副环后主环；单环内先比例、再积分、后微分。你当前的顺序跳了【{step}】。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-PID-05",
+      "category": "控制算法与PID参数",
+      "trigger": "学生整定串级主环前",
+      "condition": "副环尚未整定稳定（响应慢于主环或仍振荡）即调主环",
+      "action": "提示先稳住内环",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "副环时间常数应小于主环、响应更快，且应先整定稳定。请先让副环（{inner}）平稳，再调主环。",
+      "severity": "warn",
+      "calibration": {"tau_ratio": 6.0, "note": "外环空气惯性Ta=150s / 内环盘管惯性Tc=25s = 6.0，满足工程建议 ≥3~5 倍", "source": "calibration/AHU_Control.mo"}
+    },
+    {
+      "id": "R-PID-06",
+      "category": "控制算法与PID参数",
+      "trigger": "阀门已达极限仍达不到设定值",
+      "condition": "阀门开度=100% 或 0% 且偏差未消除，学生继续增大积分",
+      "action": "提示已达执行器极限，应排查负荷/阀门/传感器",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "阀门已到 {position}% 极限，继续增大积分无济于事。请排查：负荷是否过大、阀门是否卡涩、传感器是否偏差。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Cascade-01",
+      "category": "串级控制",
+      "trigger": "学生连接主副控制器",
+      "condition": "主控制器输出未作为副控制器设定值",
+      "action": "纠正串级结构，主输出=副设定",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "串级结构中，主环（送风温度）控制器的输出应作为副环（盘管出水温度）的设定值，不能颠倒或断开。",
+      "severity": "error",
+      "calibration": {"inner_loop_PID": "Kp=2.41, Ti=16.1s, Td=4.0s（内环快, 盘管惯性Tc=25s）", "outer_loop_PID": "Kp=1.38, Ti=44.7s, Td=11.2s（外环慢, 空气惯性Ta=150s）", "source": "calibration/AHU_Control.mo"}
+    },
+    {
+      "id": "R-Cascade-02",
+      "category": "串级控制",
+      "trigger": "学生分析串级作用",
+      "condition": "未体现副环快速克服内扰（冷水温度/压力波动、阀门特性）",
+      "action": "提示副环职能并对比投运前后",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "副环负责快速克服内扰（冷水温度/压力波动、阀门非线性），主环负责稳态精度与外扰。请对比副环投运前后的抗扰曲线。",
+      "severity": "info",
+      "calibration": {"inner_loop_PID": "Kp=2.41, Ti=16.1s, Td=4.0s", "note": "内环整定快于外环，先稳内环再调外环，抗内扰效果由仿真验证"}
+    },
+    {
+      "id": "R-Cascade-03",
+      "category": "串级控制",
+      "trigger": "学生选择副环被控变量",
+      "condition": "副环变量非“对主被控变量影响大且响应快”的量",
+      "action": "提示优选变量（盘管出水温/阀后温度）",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "副环变量应选对主被控变量（送风温度）影响大、且自身响应快的量，如盘管出水温度、阀后温度；你选的{wrong}响应偏慢/关联弱。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Cascade-04",
+      "category": "串级控制",
+      "trigger": "学生在负荷扰动/阀门迟滞/风量变化下对比单回路与串级",
+      "condition": "未呈现串级在超调、调节时间上优于单回路",
+      "action": "生成对比曲线并要求学生解释差异",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "在相同扰动下，串级应比单回路超调更小、调节时间更短。请解释你的曲线中两者差异来自哪里。",
+      "severity": "info",
+      "calibration": {"measured": "相同设定值阶跃下，串级超调较单回路降23.4%（8.0% vs 10.5%）；调节时间因外环大惯性主导略增13.6%（1057s vs 931s）。串级核心价值在抗内扰/解耦，而非设定值调节时间。", "source": "calibration/AHU_Control.mo"}
+    },
+    {
+      "id": "R-Mode-01",
+      "category": "工况与控制策略",
+      "trigger": "学生在夏季工况下选择新风策略",
+      "condition": "室外高温高湿（室外焓高于室内焓）仍采用最大新风或直流式，未切换最小新风",
+      "action": "提示切换最小新风并说明冷负荷与能耗",
+      "function": "功能三·季节与节能策略",
+      "feedback_template": "夏季室外焓（{out_h}）高于室内焓（{in_h}）时，应切换至最小新风比以降低冷负荷。你当前采用最大新风会显著增加制冷能耗。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Mode-02",
+      "category": "工况与控制策略",
+      "trigger": "冬季或低温工况配置设备保护",
+      "condition": "未设置防冻保护（热水阀未保持最小开度 / 新风阀未随低温联动关小 / 表冷器无防冻联锁）",
+      "action": "强制提示防冻联锁逻辑",
+      "function": "功能三·设备安全 / 功能六",
+      "feedback_template": "低温工况必须启用防冻保护：热水阀保持最小开度、新风阀随室外温度联动关小、表冷器设防冻联锁（水温过低停风机/开水阀）。你的配置缺少【{missing}】。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Mode-03",
+      "category": "工况与控制策略",
+      "trigger": "过渡季工况选择新风策略",
+      "condition": "室外焓≤室内焓（可用免费冷）却未启用最大新风/全新风（焓差经济器）",
+      "action": "提示启用免费冷并比较能耗",
+      "function": "功能三·季节与节能策略",
+      "feedback_template": "过渡季室外焓（{out_h}）≤室内焓（{in_h}），可启用免费冷（最大新风/全新风焓差经济器）替代部分机械制冷。你未启用，存在节能空间。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Mode-04",
+      "category": "工况与控制策略",
+      "trigger": "学生设定送风温度",
+      "condition": "送风温度低于露点温度且未配置除湿/再热，存在送风口结露风险",
+      "action": "提示露点保护与再热处理",
+      "function": "功能三·温湿度控制",
+      "feedback_template": "送风温度（{supply_t}）低于室内露点（{dew_t}）时，风口会结露，需先除湿再送风或加再热抬升送风温度。你的配置未考虑露点保护。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Safe-01",
+      "category": "设备约束与工程安全",
+      "trigger": "学生设定阀门开度",
+      "condition": "阀门开度 > 100% 或 < 0%",
+      "action": "拦截并钳位至合法区间 [0,100]",
+      "function": "功能三·设备安全 / 功能四",
+      "feedback_template": "阀门开度应在 [0,100]% 之间，你输入了 {val}%，已自动钳位至边界。请确认是否为单位/符号错误。",
+      "severity": "error",
+      "bounds": {"开度": {"min": 0, "max": 100, "unit": "%"}}
+    },
+    {
+      "id": "R-Safe-02",
+      "category": "设备约束与工程安全",
+      "trigger": "学生提交设备启停顺序",
+      "condition": "启动顺序非 先风机后水阀；停机顺序非 先关水阀后停风机",
+      "action": "提示正确启停顺序并说明风险",
+      "function": "功能三·设备安全 / 功能六",
+      "feedback_template": "正确顺序：启动先开风机、再开水阀（避免盘管积水/冻裂）；停机先关水阀、再停风机。你的顺序为【{seq}】，存在{risk}风险。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Safe-03",
+      "category": "设备约束与工程安全",
+      "trigger": "学生命令水阀开启",
+      "condition": "风机未运行（或频率低于最小频率）却命令水阀开启",
+      "action": "提示风机-水阀联锁，禁止无风送水",
+      "function": "功能三·设备安全 / 功能六",
+      "feedback_template": "风机未运行（频率 {freq}Hz 低于最小 {fmin}Hz）时禁止开启水阀，否则盘管会凝水/冻裂。请先启动风机。",
+      "severity": "error",
+      "bounds": {"最小频率": {"min": 5, "max": 50, "unit": "Hz（示例值，须按设备标定）"}}
+    },
+    {
+      "id": "R-Safe-04",
+      "category": "设备约束与工程安全",
+      "trigger": "低温工况设定新风阀",
+      "condition": "室外温度低于防冻阈值时新风阀开度>限值且未联动关小",
+      "action": "提示关小新风阀至安全开度",
+      "function": "功能六·设备安全",
+      "feedback_template": "室外温度（{out_t}）低于防冻阈值（{th}）时，新风阀应关小至 {safe}% 以下。当前 {pos}% 偏大，有冻裂风险。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Safe-05",
+      "category": "设备约束与工程安全",
+      "trigger": "学生设定风机变频器频率",
+      "condition": "频率 > 50Hz 或 < 设备最小频率",
+      "action": "提示频率边界并钳位",
+      "function": "功能三·设备安全",
+      "feedback_template": "风机频率应在 [{fmin}, 50]Hz 内，你输入 {freq}Hz，已提示边界。超频损设备，过低无法克服管网阻力。",
+      "severity": "warn",
+      "bounds": {"频率": {"min": 5, "max": 50, "unit": "Hz（示例值）"}}
+    },
+    {
+      "id": "R-Fault-01",
+      "category": "故障诊断因果",
+      "trigger": "学生诊断“送风温度持续偏高”",
+      "condition": "学生将偏高错误归因为传感器故障/控制器损坏，而未排查冷阀开度不足、冷水温度偏高、负荷过大、阀门卡涩",
+      "action": "给出 现象→可能原因 映射表，引导逐项排除",
+      "function": "功能四·故障诊断",
+      "feedback_template": "送风温度偏高的常见因果链：①冷阀开度不足→冷量不够；②冷水供水温度偏高→制冷能力降；③负荷过大→需加大风量/冷量；④阀门卡涩→实际流量小于指令。请先查冷阀实际开度与冷水温度，而非直接判传感器坏。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Fault-02",
+      "category": "故障诊断因果",
+      "trigger": "学生诊断“系统持续振荡”",
+      "condition": "学生未从 PID 参数（Kp过大/积分过强）或副环未稳分析振荡",
+      "action": "引导查参数与副环",
+      "function": "功能四·故障诊断",
+      "feedback_template": "持续振荡多因 Kp 过大或积分作用过强；串级系统中也常因副环未稳。请先降 Kp、减弱积分，并确认副环（盘管出水温）已平稳。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Fault-03",
+      "category": "故障诊断因果",
+      "trigger": "学生诊断“湿度失控”",
+      "condition": "学生未考虑露点/除湿能力/再热对湿度的影响",
+      "action": "提示湿度因果（除湿→再热→送风含湿量）",
+      "function": "功能四·故障诊断",
+      "feedback_template": "湿度失控需看除湿与再热：表冷器除湿能力是否足够、除湿后是否需再热控温、送风含湿量是否达标。你未考虑【{missing}】环节。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Fault-04",
+      "category": "故障诊断因果",
+      "trigger": "学生诊断“阀门无响应”",
+      "condition": "阀位指令变化但流量/温度不变，学生未识别执行器卡死",
+      "action": "提示执行器卡死诊断（指令≠实际）",
+      "function": "功能四·故障诊断",
+      "feedback_template": "阀位指令在变而实际流量不变，典型是执行器卡死或阀杆脱落。请对比指令开度与实际阀位反馈，而非怀疑控制器算法。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Fault-05",
+      "category": "故障诊断因果",
+      "trigger": "学生诊断“响应迟钝/滞后大”",
+      "condition": "学生未识别阀杆卡涩/摩擦力大/传感器滞后",
+      "action": "提示卡涩与滞后诊断",
+      "function": "功能四·故障诊断",
+      "feedback_template": "响应迟钝常因阀杆卡涩、摩擦力大或传感器测量滞后。请检查阀门动作是否平滑、传感器安装位置是否代表性足够。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Fault-06",
+      "category": "故障诊断因果",
+      "trigger": "学生诊断“风量不足”",
+      "condition": "学生未排查滤网堵塞/风机频率/风阀开度",
+      "action": "提示风量因果链",
+      "function": "功能四·故障诊断",
+      "feedback_template": "风量不足常见原因：滤网堵塞、风机频率偏低、风阀未全开、风管漏风。请按 滤网→频率→风阀→漏风 顺序排查。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Energ-01",
+      "category": "节能与优化",
+      "trigger": "学生启用免费冷",
+      "condition": "启用免费冷但未量化节能量（省去冷机能耗/部分负荷率）",
+      "action": "提示量化节能收益",
+      "function": "功能三·节能评价",
+      "feedback_template": "免费冷收益=省去的机械制冷能耗。请对比启用前后冷机部分负荷率与用电量，给出节能量（kWh）与比例。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Energ-02",
+      "category": "节能与优化",
+      "trigger": "学生设定温湿度设定值",
+      "condition": "设定值偏离舒适/节能区且未做优化（如夏季送风温度可放宽、冬季可下调）",
+      "action": "提示设定值优化空间",
+      "function": "功能三·节能优化",
+      "feedback_template": "在舒适前提下可优化设定值：夏季送风温度适当提高、冬季适当降低，能显著降低冷热负荷。你当前设定 {set} 仍有优化空间（建议区间 {range}）。",
+      "severity": "info",
+      "bounds": {"夏季送风温度": {"min": 12, "max": 16, "unit": "℃（示例值）"}}
+    },
+    {
+      "id": "R-Energ-03",
+      "category": "节能与优化",
+      "trigger": "学生配置新风策略",
+      "condition": "未实现 最小新风/混合回风/最大新风(免费冷) 三档基于焓差的自动切换",
+      "action": "提示三档切换判据",
+      "function": "功能三·节能优化",
+      "feedback_template": "新风应三档切换：室外焓>室内→最小新风；接近→混合；室外焓≤室内→最大新风（免费冷）。你的策略未体现焓差判据。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Cross-01",
+      "category": "学科交叉约束",
+      "trigger": "学生说明传感器/执行器信号接线",
+      "condition": "混淆 4-20mA 电流信号与 0-10V 电压信号，或未说明抗干扰/接线差异",
+      "action": "提示信号制式与工程接线要点",
+      "function": "全功能·跨学科降门槛",
+      "feedback_template": "4-20mA 为电流信号，抗干扰强、可远传、断线可检测；0-10V 为电压信号，易受干扰、距离短。DDC 模拟量多为 0-10V 或 4-20mA，接线与电源须匹配。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Cross-02",
+      "category": "学科交叉约束",
+      "trigger": "学生判定控制系统稳定性",
+      "condition": "系统临界稳定或相角裕度<30°/幅值裕度<6dB 却判为“正常”",
+      "action": "提示用伯德图/裕度判稳",
+      "function": "功能三·虚拟调试",
+      "feedback_template": "判稳看裕度：相角裕度建议 >30°、幅值裕度 >6dB。你整定后系统接近临界（裕度不足），加大扰动会发散，请减小 Kp 或加阻尼。",
+      "severity": "warn",
+      "calibration": {"verified_margins": "推荐Kp=3.32时 PM=45.1°、GM≥60dB，远高于>30°/>6dB要求", "method": "Z-N临界比例度法+Modelica等效孪生仿真", "source": "calibration/AHU_Control.mo"}
+    },
+    {
+      "id": "R-Cross-03",
+      "category": "学科交叉约束",
+      "trigger": "学生选用传感器",
+      "condition": "传感器量程不匹配测量范围（如用 0-50℃ 测 -10℃ 环境，或精度等级过低）",
+      "action": "提示量程与精度选型",
+      "function": "功能二/四·跨学科",
+      "feedback_template": "传感器量程应覆盖被测范围并留余量：测 -10~40℃ 环境应选 -20~50℃ 量程。量程过大则精度下降。你选的 {sensor} 量程 {range} 不匹配。",
+      "severity": "warn"
+    },
+    {
+      "id": "R-Teach-01",
+      "category": "教学交互与评价",
+      "trigger": "学生在未尝试时直接索要答案",
+      "condition": "学生未提交任何尝试方案即请求最终答案",
+      "action": "返回递进提示（引导性问题）而非答案，并记录求助层级",
+      "function": "功能一·学习引导",
+      "feedback_template": "我先给你一个提示：①先画出该回路的六要素；②标出信号流向。尝试后若仍卡住，我再给下一层提示，而不是直接给答案。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Teach-02",
+      "category": "教学交互与评价",
+      "trigger": "系统检测到学生连续作答结果",
+      "condition": "连续正确≥3 次未升级难度；或连续错误≥3 次未降级/补桥",
+      "action": "动态调整任务难度或插入补桥内容",
+      "function": "功能一/五·自适应",
+      "feedback_template": "你已连续答对，进入【进阶】任务；或你连续遇到困难，我先补一个前置知识点再继续。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Teach-03",
+      "category": "教学交互与评价",
+      "trigger": "系统生成本次学习评价",
+      "condition": "仅以最终对错评价，未记录尝试路径/参数演变/诊断推理过程",
+      "action": "提示补全过程性证据",
+      "function": "功能五/六·过程评价",
+      "feedback_template": "评价不只看结果。本次应记录：尝试次数、参数调整轨迹、故障归因逻辑。这些过程证据比最终对错更能反映工程能力。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Teach-04",
+      "category": "教学交互与评价",
+      "trigger": "AI 评价结果要与学生最终成绩关联",
+      "condition": "AI 评价直接绑定最终成绩且未保留教师终评覆盖权",
+      "action": "强制保留教师终评接口，AI 评价仅作参考",
+      "function": "功能六·评价合规",
+      "feedback_template": "AI 评价仅作过程参考，最终成绩由教师终评确定。系统已锁定教师覆盖权，AI 不得替代教师终评（合规要求）。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Water-01",
+      "category": "给排水恒压供水控制",
+      "trigger": "学生设定管网供水压力设定值",
+      "condition": "供水压力设定值超出推荐区间 [0.30, 0.60] MPa（最不利点压力不足则高处缺水，过高则爆管/能耗大）",
+      "action": "提示并钳位至合法区间，说明最不利点逻辑",
+      "function": "功能三·给排水恒压供水（扩展模块）",
+      "feedback_template": "管网供水压力设定值应在 [0.30,0.60] MPa：偏低则最不利点（最高/最远处）缺水，偏高则易爆管且能耗上升。你设的 {val} MPa 越界，已钳位至边界。",
+      "severity": "warn",
+      "bounds": {"供水压力设定值": {"min": 0.30, "max": 0.60, "unit": "MPa（示例值，须按楼栋最不利点标定）"}}
+    },
+    {
+      "id": "R-Water-02",
+      "category": "给排水恒压供水控制",
+      "trigger": "学生配置多泵投切策略",
+      "condition": "未按“先启先停 / 循环投切”均衡运行，导致单泵长期偏磨",
+      "action": "提示均衡投切逻辑",
+      "function": "功能三·给排水恒压供水（扩展模块）",
+      "feedback_template": "多泵系统应“先启先停、循环投切”以均衡磨损：新增负荷先起备用泵，减荷先停运行最久的泵。你的策略会让 {pump} 长期偏磨，请改为循环投切。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Water-03",
+      "category": "给排水恒压供水控制",
+      "trigger": "学生设定变频给水泵频率",
+      "condition": "频率 < 设备最小频率（5 Hz）或 > 50 Hz",
+      "action": "提示频率边界并钳位",
+      "function": "功能三·给排水恒压供水（扩展模块）",
+      "feedback_template": "给水泵变频频率应在 [5,50] Hz 内，你输入 {freq} Hz 已提示边界。低于最小频率水泵不出力，超频损伤设备。",
+      "severity": "warn",
+      "bounds": {"频率": {"min": 5, "max": 50, "unit": "Hz（示例值）"}}
+    },
+    {
+      "id": "R-Heat-01",
+      "category": "供热与通风控制",
+      "trigger": "学生设定供热系统供水温度",
+      "condition": "未按室外温度做补偿（室外越低供水温度应越高），采用固定供水温度",
+      "action": "提示“室外温度补偿”策略",
+      "function": "功能三·供热控制（扩展模块）",
+      "feedback_template": "供热应采用“室外温度补偿”：室外越冷，供水温度设定越高；室外回升则下调，兼顾舒适与节能。你采用固定供水温度 {t}℃，未体现补偿，存在节能空间。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Heat-02",
+      "category": "供热与通风控制",
+      "trigger": "学生配置新风机组冬季运行",
+      "condition": "未启用防冻保护（热水阀未保最小开度 / 新风阀未随低温联动关小）",
+      "action": "强制提示防冻联锁",
+      "function": "功能六·设备安全（扩展模块）",
+      "feedback_template": "冬季新风机组必须启用防冻保护：热水阀保最小开度、新风阀随室外低温联动关小、表冷器设防冻联锁。你的配置缺少【{missing}】。",
+      "severity": "error"
+    },
+    {
+      "id": "R-Light-01",
+      "category": "照明与供配电",
+      "trigger": "学生配置建筑照明控制策略",
+      "condition": "未采用按时钟 / 人感 / 日光调度的节能策略，仍恒定全开",
+      "action": "提示按需照明与节能调度",
+      "function": "功能三·照明节能（扩展模块）",
+      "feedback_template": "照明节能靠“按需供给”：按时钟排程、人感（occupancy）感应、自然采光区域调光。你仍恒定全开，可改为感应/调光策略显著降低能耗。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Light-02",
+      "category": "照明与供配电",
+      "trigger": "学生评价照明节能效果",
+      "condition": "未量化节能量（kWh 或比例）",
+      "action": "提示量化节能收益",
+      "function": "功能三·照明节能评价（扩展模块）",
+      "feedback_template": "照明节能收益应量化：对比改造前后用电量（kWh）与比例，而非仅说“更省电”。请给出节能量与百分比。",
+      "severity": "info"
+    },
+    {
+      "id": "R-Sys-01",
+      "category": "楼宇自控系统架构",
+      "trigger": "学生归纳 BA 系统层次",
+      "condition": "未区分现场层（传感器/执行器）、控制层（DDC/PLC）、管理层（中央监控）三层职责",
+      "action": "提示三层架构与各自职能",
+      "function": "全功能·系统认知",
+      "feedback_template": "典型楼宇自控分三层：现场层（传感器/执行器采集与动作）、控制层（DDC/PLC 运行控制算法）、管理层（中央监控/报警/能耗分析）。你混淆了【{miss}】层的职责。",
+      "severity": "info"
+    }
+  ]
+}
