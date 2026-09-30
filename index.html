@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>建筑设备自动化智控导师（原型）</title>
+<link rel="stylesheet" href="style.css">
+<!-- 公式库样式与脚本由 app.js 运行时按需加载，避免静态外链触发部署上传限制 -->
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>“建筑设备自动化智控导师”教学智能体（原型）</h1>
+    <div class="sub">普通高校赛道 · 学习赋能智能体 · 以空调机组送风温湿度控制为旗舰模块（匿名版）</div>
+  </div>
+  <div class="user"><span id="userLabel">未登录</span> <button id="logoutBtn" onclick="location.reload()">退出</button></div>
+</header>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <h2>体验账号登录</h2>
+    <p>本原型为参赛演示用，请选择体验账号进入（学习数据仅保存在本地浏览器）。</p>
+    <select id="accountSelect"></select>
+    <button class="btn" id="loginBtn">进入智能体</button>
+    <button class="btn trial" id="loginTrial">以体验账号进入</button>
+    <div class="note">说明：教学智能体不替代教师终评权；学生数据已脱敏、仅本地存储。</div>
+  </div>
+</div>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="course">课程模块</button>
+  <button class="tab-btn" data-tab="tutor">智能导学</button>
+  <button class="tab-btn" data-tab="loop">控制回路识别</button>
+  <button class="tab-btn" data-tab="debug">虚拟调试</button>
+  <button class="tab-btn" data-tab="season">季节节能控制</button>
+  <button class="tab-btn" data-tab="fault">故障诊断</button>
+  <button class="tab-btn" data-tab="path">学习路径</button>
+  <button class="tab-btn" data-tab="eval">学习评价</button>
+  <button class="tab-btn" data-tab="teacher" data-role-only="teacher" hidden>教师学情分析</button>
+  <button class="tab-btn" data-tab="kg">系统认知</button>
+  <button class="tab-btn" data-tab="rulebench">规则校验台</button>
+</nav>
+
+<main>
+  <!-- 智能导学 -->
+  <section id="course" class="tab-pane active">
+    <h3>建筑设备自动化课程模块</h3>
+    <p class="hint">按“感知—决策—执行—过程—运行—诊断”主线学习。每个模块包含知识目标、学习任务和即时自测，完成记录保存在当前浏览器。</p>
+    <div id="courseSummary" class="course-summary"></div>
+    <div id="courseModules" class="course-modules"></div>
+  </section>
+
+  <section id="tutor" class="tab-pane">
+    <h3>智能导学</h3>
+    <div class="tutor-bar">
+      <span id="kbModeLabel" class="tutor-status"></span>
+      <button id="llmSettingsBtn" class="gear" type="button">⚙ 大模型设置</button>
+    </div>
+    <div id="llmSettings" class="llm-settings" style="display:none">
+      <p class="hint">配置后，智能导学将以“检索课程知识库 + 大模型生成”方式，基于教材原文用中文回答问题并标注来源（RAG）。密钥仅保存在本机浏览器（localStorage），不会上传。</p>
+      <label class="llm-row"><span>API 地址</span><input id="llmEndpoint" placeholder="https://api.deepseek.com/v1"></label>
+      <label class="llm-row"><span>API Key</span><input id="llmKey" type="password" placeholder="sk-..."></label>
+      <label class="llm-row"><span>模型名</span><input id="llmModel" placeholder="deepseek-chat"></label>
+      <label class="llm-row"><span>代理(可选)</span><input id="llmProxy" placeholder="留空直连；部署公网建议填代理地址转发"></label>
+      <div class="llm-actions">
+        <button id="llmSave" class="btn-primary" type="button">保存并启用</button>
+        <button id="llmTest" class="btn" type="button">测试连接</button>
+        <button id="llmDisable" class="btn" type="button">停用</button>
+        <span id="llmTestMsg" class="llm-test-msg"></span>
+      </div>
+    </div>
+    <p class="hint">基于课程知识库（RAG）的检索增强答疑：已配置大模型时“先检索教材原文 → 由大模型用中文讲解并标注来源”；离线时展示最相关教材原文供查阅。试试下方问题或自由提问。</p>
+    <div id="chatBox"></div>
+    <div class="chat-input-row">
+      <input id="chatInput" placeholder="输入关于建筑设备自动化 / 空调控制的问题…">
+      <button id="chatSend">发送</button>
+    </div>
+    <div class="chips" id="chatChips"></div>
+  </section>
+
+  <!-- 控制回路识别 -->
+  <section id="loop" class="tab-pane">
+    <h3>控制回路识别</h3>
+    <p class="hint">为空调机组送风温度<b>串级控制</b>回路标注各元件角色，提交后即时纠错并解析。</p>
+    <div id="loopForm"></div>
+    <button class="btn-primary" id="loopCheck">提交并评价</button>
+    <div id="loopResult"></div>
+    <div class="bench-card loop-extension">
+      <h4>变风量系统控制回路</h4>
+      <p class="hint">识别“区域温度传感器 → VAV 控制器 → 末端风阀 → 区域风量/温度”的回路，并理解主风管静压传感器对风机变频的外层约束。</p>
+      <p>学习任务：标出区域设定值、温度偏差、风阀开度、风量反馈、静压设定值和风机频率。</p>
+    </div>
+    <div class="bench-card loop-extension">
+      <h4>风机盘管加新风系统回路</h4>
+      <p class="hint">识别“室内温控器 → 二通水阀/风机三速”和“CO₂/新风温湿度 → 新风机组”的两条协同回路。</p>
+      <p>学习任务：说明房间显热、室外新风、湿负荷和盘管水阀之间的分工。</p>
+    </div>
+  </section>
+
+  <!-- 虚拟调试 -->
+  <section id="debug" class="tab-pane">
+    <h3>串级控制虚拟调试（PID 整定）</h3>
+    <p class="hint">调节主/副环 PID 参数，运行仿真对比单回路与串级控制在负荷扰动下的动态响应。曲线由真实离散仿真生成，非预设图片。</p>
+    <div class="mode-row">
+      <label><input type="radio" name="mode" value="cascade" checked> 串级控制</label>
+      <label><input type="radio" name="mode" value="single"> 单回路控制</label>
+    </div>
+    <div class="debug-controls">
+      <div class="ctl"><label>外环 Kp</label><input type="range" id="Kp_o" min="0" max="6" step="0.1" value="1.2"><span class="val">1.2</span></div>
+      <div class="ctl"><label>外环 Ki</label><input type="range" id="Ki_o" min="0" max="2" step="0.05" value="0.15"><span class="val">0.15</span></div>
+      <div class="ctl"><label>外环 Kd</label><input type="range" id="Kd_o" min="0" max="2" step="0.05" value="0"><span class="val">0</span></div>
+      <div class="ctl"><label>内环 Kp</label><input type="range" id="Kp_i" min="0" max="10" step="0.1" value="2.5"><span class="val">2.5</span></div>
+      <div class="ctl"><label>内环 Ki</label><input type="range" id="Ki_i" min="0" max="3" step="0.05" value="0.6"><span class="val">0.6</span></div>
+      <div class="ctl"><label>内环 Kd</label><input type="range" id="Kd_i" min="0" max="3" step="0.05" value="0"><span class="val">0</span></div>
+      <div class="ctl"><label>送风设定值 ℃</label><input type="range" id="sp" min="10" max="26" step="0.5" value="16"><span class="val">16</span></div>
+      <div class="ctl"><label>进风温度 ℃</label><input type="range" id="T_air_in" min="20" max="40" step="1" value="28"><span class="val">28</span></div>
+      <div class="ctl"><label>冷水温度 ℃</label><input type="range" id="T_water" min="2" max="15" step="0.5" value="7"><span class="val">7</span></div>
+      <div class="ctl"><label>扰动时刻 s</label><input type="range" id="distTime" min="0" max="110" step="5" value="60"><span class="val">60</span></div>
+      <div class="ctl"><label>扰动幅值 ℃</label><input type="range" id="distMag" min="0" max="10" step="0.5" value="4"><span class="val">4</span></div>
+    </div>
+    <div class="debug-btns">
+      <button id="runDebug">运行仿真</button>
+      <button id="presetGood">推荐参数</button>
+      <button id="presetPoor">典型不良参数</button>
+    </div>
+    <div class="debug-grid">
+      <div><canvas id="debugCanvas" width="1280" height="640" class="high-res-chart"></canvas></div>
+    <div id="debugMetrics"></div>
+    <div class="bench-card debug-extension">
+      <h4>PID 参数整定虚拟实验</h4>
+      <p class="hint">实验顺序：先用比例控制观察稳态误差，再逐步增加积分消除误差，最后谨慎加入微分抑制扰动超调。每次只改变一个参数并记录超调量、稳定时间和稳态误差。</p>
+      <ol><li>使用“典型不良参数”记录响应特征。</li><li>点击“推荐参数”作为初始值。</li><li>分别改变 Kp、Ki、Kd，比较负荷扰动下的响应曲线。</li></ol>
+    </div>
+    </div>
+  </section>
+
+  <!-- 季节节能控制（焓差控制与过渡季变新风量） -->
+  <section id="season" class="tab-pane">
+    <h3>季节节能控制（焓差控制与过渡季变新风量）</h3>
+    <p class="hint">输入室内外温湿度，计算焓差并判定新风机组控制策略；对比夏季与过渡季典型日的制冷能耗，理解免费冷收益。曲线由真实焓值计算生成，非预设图片。</p>
+    <div class="season-controls">
+      <div class="ctl"><label>室外温度 ℃</label><input type="range" id="out_t" min="-5" max="40" step="1" value="20"><span class="val">20</span></div>
+      <div class="ctl"><label>室外湿度 %</label><input type="range" id="out_rh" min="20" max="95" step="1" value="55"><span class="val">55</span></div>
+      <div class="ctl"><label>室内设定温度 ℃</label><input type="range" id="in_t" min="18" max="28" step="1" value="24"><span class="val">24</span></div>
+      <div class="ctl"><label>室内设定湿度 %</label><input type="range" id="in_rh" min="30" max="70" step="1" value="50"><span class="val">50</span></div>
+      <div class="ctl"><label>最小新风比 %</label><input type="range" id="min_fresh" min="5" max="30" step="1" value="10"><span class="val">10</span></div>
+    </div>
+    <div class="debug-btns">
+      <button class="btn" id="seasonCalc">计算焓差与新风策略</button>
+      <button class="btn" id="seasonDay">对比夏季 vs 过渡季典型日</button>
+      <button class="btn" id="seasonQuiz">随机判定练习</button>
+    </div>
+    <div id="seasonResult"></div>
+    <canvas id="seasonCanvas" width="1360" height="640" class="high-res-chart"></canvas>
+  </section>
+
+  <!-- 故障诊断 -->
+  <section id="fault" class="tab-pane">
+    <h3>故障诊断训练</h3>
+    <p class="hint">随机生成传感器/阀门/加湿/风量故障，按“现象—原因—验证—处理”闭环分析并提交。</p>
+    <button class="btn-primary" id="faultGen">生成随机故障</button>
+    <p id="faultSymptom" style="margin-top:10px;font-weight:600;"></p>
+    <canvas id="faultCanvas" width="1280" height="480"></canvas>
+    <div id="faultOptions"></div>
+    <button class="btn-primary" id="faultSubmit">提交诊断</button>
+    <div id="faultResult"></div>
+    <div class="bench-card fault-extension">
+      <h4>冬季盘管防冻专项</h4>
+      <p class="hint">典型联锁顺序：低温预警 → 关小/关闭新风阀 → 打开热水阀至保护开度 → 停止送风机或切断冷源 → 报警并保持人工复位条件。</p>
+      <p>诊断任务：核对室外温度、防冻开关、盘管出水温度、新风阀反馈、热水阀反馈和风机运行状态，避免只复位报警而未排除根因。</p>
+    </div>
+  </section>
+
+  <!-- 学习路径 -->
+  <section id="path" class="tab-pane">
+    <h3>个性化学习路径</h3>
+    <p class="hint">按基础 / 提高 / 挑战三级任务规划学习，勾选完成情况（仅本地保存）。每项任务都有“去练习 ›”按钮，顶部“建议下一步”会带你进入最该练习的模块。</p>
+    <div id="pathBox"></div>
+  </section>
+
+  <!-- 学习评价 -->
+  <section id="eval" class="tab-pane">
+    <h3>学习过程评价</h3>
+    <p class="hint">汇总各模块练习得分，生成个人学习过程报告（智能体提供建议，教师保留最终评价权）。</p>
+    <div id="evalBox"></div>
+    <textarea id="evalReport" readonly></textarea>
+    <button class="btn-primary" id="downloadReport" style="margin-top:8px;">下载报告</button>
+  </section>
+
+  <section id="teacher" class="tab-pane">
+    <h3>教师端 · 学情分析</h3>
+    <p class="hint">汇总体验账号的课程模块成绩、控制回路、虚拟调试、节能控制和故障诊断成绩。数据仅读取本机浏览器中保存的脱敏学习记录。</p>
+    <div class="teacher-input"><input id="teacherStudentId" placeholder="输入学生账号，例如 student_01"><button class="btn" id="teacherRefresh">刷新学情</button></div>
+    <div id="teacherSummary"></div>
+    <div class="teacher-charts"><div class="teacher-chart-card"><h4>模块平均分</h4><canvas id="teacherScoreChart" width="1000" height="420"></canvas></div><div class="teacher-chart-card"><h4>薄弱知识点分析</h4><div id="teacherWeakPoints"></div></div></div>
+    <div id="teacherTable"></div>
+    <div id="teacherAdvice" class="teacher-advice"></div>
+  </section>
+
+  <!-- 系统认知 · 知识图谱（解决学生“看不到系统 / 知识串不起来”痛点） -->
+  <section id="kg" class="tab-pane">
+    <h3>系统认知 · 知识图谱</h3>
+    <p class="hint">学生三大痛点之一是“看不到系统”。这里用可交互的<b>空调机组系统结构图</b>与<b>课程知识图谱浏览器</b>（上篇·自动控制原理 / 下篇·楼宇自动化，依据《自控原理与楼宇自动化—知识图谱1.xlsx》构建，共 650+ 节点）。点击图谱任意节点，查看其<b>知识点分类</b>、<b>标签</b>（重点/难点/考点/课程思政）与下属主题。</p>
+    <div class="kg-sub">
+      <button class="kg-sub-btn" data-view="system">① 空调机组系统结构</button>
+      <button class="kg-sub-btn active" data-view="graph">② 课程知识图谱（上篇 / 下篇）</button>
+    </div>
+    <div id="kgSystem" style="display:none"></div>
+    <iframe id="kgFrame" src="knowledge-graph.html" style="display:block;width:100%;height:80vh;border:0;border-radius:16px;box-shadow:0 10px 30px rgba(30,41,59,.10);background:#fff"></iframe>
+    <div id="kgGraph" style="display:none"></div>
+    <div id="kgTheory" style="display:none"></div>
+    <div id="kgFocusMap" class="kg-focus-map" style="display:none"></div>
+    <div id="kgDetail" class="kg-detail" style="display:none"></div>
+  </section>
+
+  <!-- 规则校验台（控制约束层 / 规则引擎） -->
+  <section id="rulebench" class="tab-pane">
+    <h3>规则校验台（控制约束层 · 规则引擎实时判定）</h3>
+    <p class="hint">本模块演示“控制规则库”如何作为<b>控制约束层</b>，对学生的学习操作做确定性判定（判错 / 拦错 / 给依据）。规则来自 <code>rules.json</code>，由前端规则引擎 <code>RuleEngine</code> 实时加载与匹配；修改规则库无需改动前端代码。规则引擎只负责“对不对、能不能”，大模型只负责“怎么讲”。</p>
+    <div id="ruleStatus" class="rule-status">规则库加载中…</div>
+
+    <div class="bench-grid">
+      <div class="bench-card">
+        <h4>① PID 参数边界（R-PID-03）</h4>
+        <div class="ctl"><label>主环 Kp</label><input type="number" id="rb_Kp_o" value="1.2" step="0.1"><span class="val">推荐 [0.5, 8.0]</span></div>
+        <div class="ctl"><label>副环 Kp</label><input type="number" id="rb_Kp_i" value="2.5" step="0.1"><span class="val">推荐 [0.5, 8.0]</span></div>
+        <button class="btn-primary" id="rbPidBtn">校验 PID 参数</button>
+        <div id="rbPidOut" class="rb-out"></div>
+      </div>
+
+      <div class="bench-card">
+        <h4>② 阀门开度边界（R-Safe-01）</h4>
+        <div class="ctl"><label>阀门开度 %</label><input type="number" id="rb_valve" value="60" step="1"><span class="val">合法 [0, 100]</span></div>
+        <button class="btn-primary" id="rbValveBtn">校验阀门开度</button>
+        <div id="rbValveOut" class="rb-out"></div>
+      </div>
+
+      <div class="bench-card">
+        <h4>③ 设备启停顺序（R-Safe-02）</h4>
+        <div class="ctl"><label>启动顺序</label>
+          <select id="rb_start"><option value="风机→水阀">风机→水阀（正确）</option><option value="水阀→风机">水阀→风机（错误）</option></select>
+        </div>
+        <div class="ctl"><label>停机顺序</label>
+          <select id="rb_stop"><option value="水阀→风机">水阀→风机（正确）</option><option value="风机→水阀">风机→水阀（错误）</option></select>
+        </div>
+        <button class="btn-primary" id="rbSeqBtn">校验启停顺序</button>
+        <div id="rbSeqOut" class="rb-out"></div>
+      </div>
+
+      <div class="bench-card">
+        <h4>④ 风机-水阀联锁（R-Safe-03）</h4>
+        <div class="ctl"><label>风机频率 Hz</label><input type="number" id="rb_freq" value="30" step="1"><span class="val">最小 5 Hz</span></div>
+        <div class="ctl"><label>水阀指令</label>
+          <select id="rb_vcmd"><option value="关">关（允许）</option><option value="开">开（需风机运行）</option></select>
+        </div>
+        <button class="btn-primary" id="rbInterBtn">校验联锁</button>
+        <div id="rbInterOut" class="rb-out"></div>
+      </div>
+
+      <div class="bench-card">
+        <h4>⑤ 给排水供水压力（R-Water-01）</h4>
+        <div class="ctl"><label>供水压力 MPa</label><input type="number" id="rb_press" value="0.45" step="0.01"><span class="val">合法 [0.30, 0.60]</span></div>
+        <button class="btn-primary" id="rbPressBtn">校验供水压力</button>
+        <div id="rbPressOut" class="rb-out"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>建筑设备自动化智控导师 · 参赛原型（匿名版） · 数据本地存储，未上传任何个人信息</footer>
+
+<script src="rules.js"></script>
+<script src="sim.js"></script>
+<script src="knowledge.js"></script>
+<script src="kg.js"></script>
+<script src="search.js"></script>
+<script src="vendor/marked.min.js"></script>
+<!-- 公式库脚本由 app.js 运行时动态注入 -->
+<script src="course.js"></script>
+<script src="question_bank.js"></script>
+<script src="course_ui.js"></script>
+<script src="app.js"></script>
+<script src="learning_extensions.js"></script>
+<script src="fault_practice.js"></script>
+<script src="season_fix.js"></script>
+<script src="teacher_analysis.js"></script>
+<script src="teacher_charts.js"></script>
+<script src="kg_extension.js"></script>
+</body>
+</html>
